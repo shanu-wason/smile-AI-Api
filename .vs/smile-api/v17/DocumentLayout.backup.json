@@ -1,7 +1,20 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\demo\\smile-api\\",
-  "Documents": [],
+  "WorkspaceRootPath": "E:\\smile\\smile-AI-Api\\smile-api\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{9D53C57C-0B30-4645-8C78-529AA8EEEF22}|smile-api.csproj|e:\\smile\\smile-ai-api\\smile-api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{9D53C57C-0B30-4645-8C78-529AA8EEEF22}|smile-api.csproj|solutionrelative:appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9D53C57C-0B30-4645-8C78-529AA8EEEF22}|smile-api.csproj|e:\\smile\\smile-ai-api\\smile-api\\smileapi.domain\\entities\\smilescan.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9D53C57C-0B30-4645-8C78-529AA8EEEF22}|smile-api.csproj|solutionrelative:smileapi.domain\\entities\\smilescan.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9D53C57C-0B30-4645-8C78-529AA8EEEF22}|smile-api.csproj|e:\\smile\\smile-ai-api\\smile-api\\smileapi.domain\\entities\\aiusagelog.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9D53C57C-0B30-4645-8C78-529AA8EEEF22}|smile-api.csproj|solutionrelative:smileapi.domain\\entities\\aiusagelog.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
@@ -9,7 +22,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": -1,
+          "SelectedChildIndex": 6,
           "Children": [
             {
               "$type": "Bookmark",
@@ -34,6 +47,45 @@
             {
               "$type": "Bookmark",
               "Name": "ST:132:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "E:\\smile\\smile-AI-Api\\smile-api\\appsettings.json",
+              "RelativeDocumentMoniker": "appsettings.json",
+              "ToolTip": "E:\\smile\\smile-AI-Api\\smile-api\\appsettings.json",
+              "RelativeToolTip": "appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-03-06T17:35:07.073Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "SmileScan.cs",
+              "DocumentMoniker": "E:\\smile\\smile-AI-Api\\smile-api\\SmileApi.Domain\\Entities\\SmileScan.cs",
+              "RelativeDocumentMoniker": "SmileApi.Domain\\Entities\\SmileScan.cs",
+              "ToolTip": "E:\\smile\\smile-AI-Api\\smile-api\\SmileApi.Domain\\Entities\\SmileScan.cs",
+              "RelativeToolTip": "SmileApi.Domain\\Entities\\SmileScan.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-06T17:35:00.993Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "AIUsageLog.cs",
+              "DocumentMoniker": "E:\\smile\\smile-AI-Api\\smile-api\\SmileApi.Domain\\Entities\\AIUsageLog.cs",
+              "RelativeDocumentMoniker": "SmileApi.Domain\\Entities\\AIUsageLog.cs",
+              "ToolTip": "E:\\smile\\smile-AI-Api\\smile-api\\SmileApi.Domain\\Entities\\AIUsageLog.cs",
+              "RelativeToolTip": "SmileApi.Domain\\Entities\\AIUsageLog.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-06T17:34:54.687Z",
+              "EditorCaption": ""
             }
           ]
         }

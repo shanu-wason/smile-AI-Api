@@ -5,12 +5,146 @@
     "version": "1.0"
   },
   "paths": {
+    "/api/v1/Observability/stats": {
+      "get": {
+        "tags": [
+          "Observability"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservabilityStatsDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservabilityStatsDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservabilityStatsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/SmileScan": {
+      "post": {
+        "tags": [
+          "SmileScan"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SmileScanRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SmileScanRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SmileScanRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/SmileScanResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SmileScanResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SmileScanResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/SmileScan/{externalPatientId}": {
+      "get": {
+        "tags": [
+          "SmileScan"
+        ],
+        "parameters": [
+          {
+            "name": "externalPatientId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SmileScanResponseDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SmileScanResponseDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SmileScanResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/WeatherForecast": {
       "get": {
         "tags": [
           "WeatherForecast"
         ],
         "operationId": "GetWeatherForecast",
+        "parameters": [
+          {
+            "name": "api-version",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -47,6 +181,163 @@
   },
   "components": {
     "schemas": {
+      "BreakdownDto": {
+        "type": "object",
+        "properties": {
+          "alignmentScore": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "gumHealthScore": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "whitenessScore": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "symmetryScore": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "plaqueRiskLevel": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CarePlanActionDto": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "impact": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ObservabilityStatsDto": {
+        "type": "object",
+        "properties": {
+          "totalScans": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "averageProcessingTimeMs": {
+            "type": "number",
+            "format": "double"
+          },
+          "totalTokensUsed": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "averageTokensPerScan": {
+            "type": "number",
+            "format": "double"
+          },
+          "totalCost": {
+            "type": "number",
+            "format": "double"
+          },
+          "averageCostPerScan": {
+            "type": "number",
+            "format": "double"
+          },
+          "failedScans": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failureRate": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SmileScanRequestDto": {
+        "required": [
+          "externalPatientId",
+          "imageUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "externalPatientId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "imageUrl": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "modelSelection": {
+            "type": "string",
+            "nullable": true
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "SmileScanResponseDto": {
+        "type": "object",
+        "properties": {
+          "scanId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "externalPatientId": {
+            "type": "string",
+            "nullable": true
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "smileScore": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "breakdown": {
+            "$ref": "#/components/schemas/BreakdownDto"
+          },
+          "confidenceScore": {
+            "type": "number",
+            "format": "double"
+          },
+          "imageQualityScore": {
+            "type": "number",
+            "format": "double"
+          },
+          "carePlanActions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CarePlanActionDto"
+            },
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
       "WeatherForecast": {
         "type": "object",
         "properties": {

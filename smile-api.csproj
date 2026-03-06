@@ -7,7 +7,24 @@
     <RootNamespace>smile_api</RootNamespace>
   </PropertyGroup>
 
+  <!-- Exclude class library project folders so their source and obj/bin are not compiled into this project (avoids duplicate assembly attributes) -->
   <ItemGroup>
+    <Compile Remove="SmileApi.Domain\**" />
+    <Compile Remove="SmileApi.Application\**" />
+    <Compile Remove="SmileApi.Infrastructure\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="SmileApi.Application\SmileApi.Application.csproj" />
+    <ProjectReference Include="SmileApi.Infrastructure\SmileApi.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Asp.Versioning.Mvc" Version="8.1.0" />
+    <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.0" />
+    <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="10.0.3" />
+    <PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
+    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 

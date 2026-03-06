@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("smile-api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a73e398227accd255604fc200a466da76b4f2a70")]
 [assembly: System.Reflection.AssemblyProductAttribute("smile-api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("smile-api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
