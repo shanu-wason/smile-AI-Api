@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -9,9 +9,18 @@
 
   <!-- Exclude class library project folders so their source and obj/bin are not compiled into this project (avoids duplicate assembly attributes) -->
   <ItemGroup>
-    <Compile Remove="SmileApi.Application\**\*" />
-    <Compile Remove="SmileApi.Domain\**\*" />
-    <Compile Remove="SmileApi.Infrastructure\**\*" />
+    <Compile Remove="SmileApi.Application\**" />
+    <Compile Remove="SmileApi.Domain\**" />
+    <Compile Remove="SmileApi.Infrastructure\**" />
+    <Content Remove="SmileApi.Application\**" />
+    <Content Remove="SmileApi.Domain\**" />
+    <Content Remove="SmileApi.Infrastructure\**" />
+    <EmbeddedResource Remove="SmileApi.Application\**" />
+    <EmbeddedResource Remove="SmileApi.Domain\**" />
+    <EmbeddedResource Remove="SmileApi.Infrastructure\**" />
+    <None Remove="SmileApi.Application\**" />
+    <None Remove="SmileApi.Domain\**" />
+    <None Remove="SmileApi.Infrastructure\**" />
   </ItemGroup>
 
   <ItemGroup>

@@ -13,10 +13,12 @@ namespace smile_api.Controllers;
 public class SmileScanController : ControllerBase
 {
     private readonly ISmileScanService _smileScanService;
+    private readonly IUserRepository _userRepository;
 
-    public SmileScanController(ISmileScanService smileScanService)
+    public SmileScanController(ISmileScanService smileScanService, IUserRepository userRepository)
     {
         _smileScanService = smileScanService;
+        _userRepository = userRepository;
     }
 
     [HttpPost]
@@ -35,7 +37,10 @@ public class SmileScanController : ControllerBase
 
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (Guid.TryParse(userIdClaim, out var userId))
-            request.UserId = userId;
+        {
+            var userExists = await _userRepository.GetByIdAsync(userId) != null;
+            request.UserId = userExists ? userId : null;
+        }
 
         Dictionary<string, string>? userApiKeys = null;
         var openRouterKey = Request.Headers["X-OpenRouter-Key"].FirstOrDefault();

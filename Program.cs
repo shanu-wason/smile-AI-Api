@@ -85,7 +85,11 @@ try
     // Infrastructure
     builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseNpgsql(builder.Configuration.GetConnectionString("SupabaseConnection")));
-    builder.Services.AddHttpClient<IImageProcessingService, ImageProcessingService>();
+    builder.Services.AddHttpClient<IImageProcessingService, ImageProcessingService>(client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(60);
+        client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "SmileAI-Backend/1.0");
+    });
     builder.Services.AddScoped<ISmileScanRepository, SupabaseSmileScanRepository>();
 
     builder.Services.AddHttpClient<IAIAnalysisService, OpenAIAnalysisService>(client =>

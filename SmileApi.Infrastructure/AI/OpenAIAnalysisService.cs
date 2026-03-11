@@ -166,7 +166,7 @@ Output ONLY the JSON. Nothing else."
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogError("Smile detection call failed: {StatusCode} {Response}", response.StatusCode, content);
-            throw new HttpRequestException($"AI smile detection API error: {response.StatusCode}");
+            throw new HttpRequestException(BuildAiErrorMessage(response.StatusCode, content, "smile detection"));
         }
 
         using var doc = JsonDocument.Parse(content);
@@ -264,9 +264,19 @@ RULES:
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogError("Dental scoring call failed: {StatusCode} {Response}", response.StatusCode, content);
-            throw new HttpRequestException($"AI scoring API error: {response.StatusCode}");
+            throw new HttpRequestException(BuildAiErrorMessage(response.StatusCode, content, "scoring"));
         }
         return content;
+    }
+
+    private static string BuildAiErrorMessage(System.Net.HttpStatusCode statusCode, string responseBody, string step)
+    {
+        if (statusCode == System.Net.HttpStatusCode.Unauthorized)
+            return "The AI provider rejected the request (invalid or expired API key). Add or update your API key in Settings, or try the model 'Llama 3.2 Vision (NVIDIA)' which uses the server key.";
+        if (statusCode == System.Net.HttpStatusCode.Forbidden)
+            return "The AI provider denied access (forbidden). Check your API key and account limits.";
+        string detail = string.IsNullOrWhiteSpace(responseBody) ? "" : $" Detail: {responseBody.Substring(0, Math.Min(200, responseBody.Length))}.";
+        return $"AI {step} API error: {statusCode}.{detail}";
     }
 
     private (string Provider, string ModelId, string ApiUrl, string? ApiKey) ResolveModel(string? modelSelection, Dictionary<string, string>? userApiKeys)
