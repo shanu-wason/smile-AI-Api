@@ -1,8 +1,12 @@
+using System.Text;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Extensions.Http;
@@ -42,6 +46,32 @@ try
         serverOptions.Limits.MaxRequestBodySize = 50 * 1024 * 1024; // 50 MB
     });
 
+    // JWT & Auth
+    builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
+    builder.Services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
+    builder.Services.AddScoped<IUserRepository, EfUserRepository>();
+    builder.Services.AddScoped<IAuthService, AuthService>();
+
+    var jwtKey = builder.Configuration["Jwt:Key"] ?? "";
+    if (!string.IsNullOrWhiteSpace(jwtKey))
+    {
+        builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+                    ValidateIssuer = true,
+                    ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "smile-api",
+                    ValidateAudience = true,
+                    ValidAudience = builder.Configuration["Jwt:Audience"] ?? "smile-api",
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.FromMinutes(1)
+                };
+            });
+    }
+
     // Application
     builder.Services.AddScoped<ISmileScanService, SmileScanService>();
     builder.Services.AddSignalR();
@@ -53,6 +83,8 @@ try
     builder.Services.AddSingleton<IConfidenceEngine, ConfidenceEngine>();
 
     // Infrastructure
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseNpgsql(builder.Configuration.GetConnectionString("SupabaseConnection")));
     builder.Services.AddHttpClient<IImageProcessingService, ImageProcessingService>();
     builder.Services.AddScoped<ISmileScanRepository, SupabaseSmileScanRepository>();
 
@@ -111,6 +143,7 @@ try
     app.UseSwagger();
     app.UseSwaggerUI();
     app.UseRateLimiter();
+    app.UseAuthentication();
     app.UseAuthorization();
 
     app.MapControllers().RequireRateLimiting("strict");

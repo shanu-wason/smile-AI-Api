@@ -41,3 +41,12 @@ ScaffoldingReadMe.txt
 # Others
 *.cache
 *.vsidx
+/obj/Debug/net8.0/rpswa.dswa.cache.json
+/obj/Debug/net8.0/smile-api.AssemblyInfoInputs.cache
+/obj/Debug/net8.0/smile-api.AssemblyInfo.cs
+/obj/Debug/net8.0/smile-api.assets.cache
+/obj/Debug/net8.0/smile-api.csproj.AssemblyReference.cache
+/obj/Debug/net8.0/smile-api.GeneratedMSBuildEditorConfig.editorconfig
+/obj/project.nuget.cache
+/obj/project.assets.json
+/obj/smile-api.csproj.nuget.dgspec.json
