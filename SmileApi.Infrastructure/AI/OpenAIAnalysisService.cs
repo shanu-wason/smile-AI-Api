@@ -23,13 +23,14 @@ public class OpenAIAnalysisService : IAIAnalysisService
         _logger = logger;
     }
 
-    public async Task<SmileAnalysisResultDto> AnalyzeAsync(byte[] imageBytes, string? modelSelection = null, Dictionary<string, string>? userApiKeys = null)
+    public async Task<SmileAnalysisResultDto> AnalyzeAsync(byte[] imageBytes, string? modelSelection = null, Dictionary<string, string>? userApiKeys = null, Action<string, int>? onProgress = null)
     {
         var (provider, modelId, apiUrl, apiKey) = ResolveModel(modelSelection, userApiKeys);
         _logger.LogInformation("Resolved model: provider={Provider}, model={Model}, url={Url}", provider, modelId, apiUrl);
 
         if (string.IsNullOrWhiteSpace(apiKey))
-            throw new InvalidOperationException($"No API key configured for provider '{provider}'. Please add your API key in Settings.");
+            throw new InvalidOperationException(
+                $"No API key configured for provider '{provider}'. Add the key in backend appsettings.json: OPENAI_API_KEY for OpenAI Direct, OPENROUTER_API_KEY for OpenRouter, NVIDIA_API_KEY for NVIDIA. In the app, select the matching model (e.g. 'GPT-4o-mini (OpenAI Direct)' when using an OpenAI key).");
 
         var base64Image = Convert.ToBase64String(imageBytes);
         var overallStopwatch = Stopwatch.StartNew();
@@ -63,6 +64,8 @@ public class OpenAIAnalysisService : IAIAnalysisService
             throw new ArgumentException($"No smile or teeth detected in the image. Please capture or upload a clear dental photo. (AI Reason: {gateReason})", gateException);
         }
 
+        onProgress?.Invoke("Smile detected, analyzing details...", 50);
+
         SmileAnalysisResultDto? finalResult = null;
         Exception? lastException = null;
 
@@ -81,8 +84,8 @@ public class OpenAIAnalysisService : IAIAnalysisService
             catch (Exception ex) when (ex.GetType().Name == "BrokenCircuitException")
             {
                 _logger.LogWarning("[CIRCUIT TRIPPED] Primary LLM is down. Executing instant failover to GPT-4o...");
-                var fallbackApiKey = _configuration["OPENROUTER_API_KEY"];
-                if (string.IsNullOrEmpty(fallbackApiKey)) throw new InvalidOperationException("Failover triggered, but OPENROUTER_API_KEY is missing.");
+                var fallbackApiKey = _configuration["OPENAI_API_KEY"];
+                if (string.IsNullOrEmpty(fallbackApiKey)) throw new InvalidOperationException("Failover triggered, but OOPENAI_API_KEY is missing.");
                 var scoringResponse = await RunDentalScoringAsync(fallbackApiKey, base64Image, "https://openrouter.ai/api/v1/chat/completions", "openai/gpt-4o-mini");
                 var tokensUsed = ExtractTokensUsed(scoringResponse);
                 overallStopwatch.Stop();
@@ -109,15 +112,13 @@ public class OpenAIAnalysisService : IAIAnalysisService
 
     private async Task<(bool IsSmileWithVisibleTeeth, double Confidence, string Reason)> RunSmileDetectionAsync(string apiKey, string base64Image, string apiUrl, string modelName)
     {
-        var gateBody = new
+        var imageUrl = $"data:image/jpeg;base64,{base64Image}";
+        var messages = new object[]
         {
-            model = modelName,
-            messages = new object[]
+            new
             {
-                new
-                {
-                    role = "system",
-                    content = @"You are a strict visual pre-screening AI. Your ONLY job is to determine if an image contains human teeth that are clearly visible and prominent enough for clinical evaluation.
+                role = "system",
+                content = @"You are a strict visual pre-screening AI. Your ONLY job is to determine if an image contains human teeth that are clearly visible and prominent enough for clinical evaluation.
 
 RULES:
 1. Output ONLY raw JSON. No markdown, no commentary.
@@ -134,25 +135,38 @@ DECISION CRITERIA:
 - isSmileWithVisibleTeeth = FALSE IF: The mouth is closed, teeth are not visible, or it is a non-human image.
 
 Output ONLY the JSON. Nothing else."
-                },
-                new
-                {
-                    role = "user",
-                    content = new object[]
-                    {
-                        new { type = "text", text = "Are human teeth clearly visible in this image? Return only the JSON." },
-                        new { type = "image_url", image_url = new { url = $"data:image/jpeg;base64,{base64Image}" } }
-                    }
-                }
             },
-            max_tokens = 100,
-            temperature = 0.0,
-            seed = 42
+            new
+            {
+                role = "user",
+                content = new object[]
+                {
+                    new { type = "text", text = "Are human teeth clearly visible in this image? Return only the JSON." },
+                    new { type = "image_url", image_url = new { url = imageUrl } }
+                }
+            }
         };
+
+        var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = null, WriteIndented = false, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+        using var stream = new MemoryStream();
+        await using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = false }))
+        {
+            writer.WriteStartObject();
+            writer.WriteString("model", modelName);
+            writer.WritePropertyName("messages");
+            JsonSerializer.Serialize(writer, messages, jsonOptions);
+            writer.WriteNumber("max_tokens", 100);
+            writer.WriteNumber("temperature", 0.0);
+            if (!apiUrl.Contains("api.openai.com", StringComparison.OrdinalIgnoreCase))
+                writer.WriteNumber("seed", 42);
+            writer.WriteEndObject();
+        }
+        stream.Position = 0;
+        var jsonBody = Encoding.UTF8.GetString(stream.ToArray());
 
         var request = new HttpRequestMessage(HttpMethod.Post, apiUrl)
         {
-            Content = new StringContent(JsonSerializer.Serialize(gateBody), Encoding.UTF8, "application/json")
+            Content = new StringContent(jsonBody, Encoding.UTF8, "application/json")
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
         if (apiUrl.Contains("openrouter"))
@@ -208,15 +222,13 @@ Output ONLY the JSON. Nothing else."
 
     private async Task<string> RunDentalScoringAsync(string apiKey, string base64Image, string apiUrl, string modelName)
     {
-        var scoringBody = new
+        var imageUrl = $"data:image/jpeg;base64,{base64Image}";
+        var messages = new object[]
         {
-            model = modelName,
-            messages = new object[]
+            new
             {
-                new
-                {
-                    role = "system",
-                    content = @"You are an expert cosmetic dental AI. Your job is to score the visible teeth in the provided image.
+                role = "system",
+                content = @"You are an expert cosmetic dental AI. Your job is to score the visible teeth in the provided image.
 As long as human teeth are visible, you MUST score them. Set IsDentalImage to true. ONLY set IsDentalImage to false if there are genuinely NO TEETH visible.
 
 RULES:
@@ -232,25 +244,44 @@ RULES:
 - PlaqueRiskLevel: exactly ""low"" or ""medium"" or ""high""
 - AiSelfConfidence: decimal 0.0-1.0
 - CarePlanActions: array of 3-5 objects with: Category, Title, Description, Impact"
-                },
-                new
-                {
-                    role = "user",
-                    content = new object[]
-                    {
-                        new { type = "text", text = "Score the teeth visible in this dental image. Output only the raw JSON." },
-                        new { type = "image_url", image_url = new { url = $"data:image/jpeg;base64,{base64Image}" } }
-                    }
-                }
             },
-            max_tokens = 600,
-            temperature = 0.0,
-            seed = 42
+            new
+            {
+                role = "user",
+                content = new object[]
+                {
+                    new { type = "text", text = "Score the teeth visible in this dental image. Output only the raw JSON." },
+                    new { type = "image_url", image_url = new { url = imageUrl } }
+                }
+            }
         };
+
+        var jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = null,
+            WriteIndented = false,
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        };
+
+        using var stream = new MemoryStream();
+        await using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = false, SkipValidation = false }))
+        {
+            writer.WriteStartObject();
+            writer.WriteString("model", modelName);
+            writer.WritePropertyName("messages");
+            JsonSerializer.Serialize(writer, messages, jsonOptions);
+            writer.WriteNumber("max_tokens", 600);
+            writer.WriteNumber("temperature", 0.0);
+            if (!apiUrl.Contains("api.openai.com", StringComparison.OrdinalIgnoreCase))
+                writer.WriteNumber("seed", 42);
+            writer.WriteEndObject();
+        }
+        stream.Position = 0;
+        var jsonBody = Encoding.UTF8.GetString(stream.ToArray());
 
         var request = new HttpRequestMessage(HttpMethod.Post, apiUrl)
         {
-            Content = new StringContent(JsonSerializer.Serialize(scoringBody), Encoding.UTF8, "application/json")
+            Content = new StringContent(jsonBody, Encoding.UTF8, "application/json")
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
         if (apiUrl.Contains("openrouter"))
@@ -272,9 +303,9 @@ RULES:
     private static string BuildAiErrorMessage(System.Net.HttpStatusCode statusCode, string responseBody, string step)
     {
         if (statusCode == System.Net.HttpStatusCode.Unauthorized)
-            return "The AI provider rejected the request (invalid or expired API key). Add or update your API key in Settings, or try the model 'Llama 3.2 Vision (NVIDIA)' which uses the server key.";
+            return "The AI provider rejected the request (invalid or expired API key). Ensure the correct key is set in the backend appsettings.json: NVIDIA_API_KEY for Llama, OPENAI_API_KEY for OpenRouter, OPENAI_API_KEY for OpenAI Direct.";
         if (statusCode == System.Net.HttpStatusCode.Forbidden)
-            return "The AI provider denied access (forbidden). Check your API key and account limits.";
+            return "The AI provider denied access (forbidden). Check your API key and account limits in appsettings.json.";
         string detail = string.IsNullOrWhiteSpace(responseBody) ? "" : $" Detail: {responseBody.Substring(0, Math.Min(200, responseBody.Length))}.";
         return $"AI {step} API error: {statusCode}.{detail}";
     }
@@ -323,7 +354,6 @@ RULES:
             string configKeyLabel = provider switch
             {
                 "nvidia" => "NVIDIA_API_KEY",
-                "openrouter" => "OPENROUTER_API_KEY",
                 "openai" => "OPENAI_API_KEY",
                 "anthropic" => "ANTHROPIC_API_KEY",
                 "google" => "GOOGLE_API_KEY",

@@ -22,8 +22,11 @@ public class SmileScanController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<SmileScanResponseDto>> CreateScan([FromBody] SmileScanRequestDto request)
+    public async Task<ActionResult<SmileScanResponseDto>> CreateScan([FromBody] SmileScanRequestDto? request)
     {
+        if (request == null)
+            return BadRequest("Request body is required.");
+
         var (patientValid, sanitizedPatientId, patientError) = InputSanitizer.SanitizePatientId(request.ExternalPatientId);
         if (!patientValid)
             return BadRequest(patientError);
@@ -55,8 +58,19 @@ public class SmileScanController : ControllerBase
         if (allKeys.Any(k => !string.IsNullOrEmpty(k.Item2)))
             userApiKeys = allKeys.Where(k => !string.IsNullOrEmpty(k.Item2)).ToDictionary(k => k.Item1, k => k.Item2!);
 
-        var result = await _smileScanService.CreateScanAsync(request, userApiKeys);
-        return Ok(result);
+        try
+        {
+            var result = await _smileScanService.CreateScanAsync(request, userApiKeys);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Analysis failed. " + (ex.InnerException?.Message ?? ex.Message) });
+        }
     }
 
     [HttpGet("{externalPatientId}")]
