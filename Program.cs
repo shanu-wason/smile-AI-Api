@@ -1,25 +1,22 @@
-using System.Text;
-using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Extensions.Http;
 using Serilog;
+using smile_api.Hubs;
+using smile_api.Infrastructure;
+using smile_api.Middleware;
 using SmileApi.Application.Interfaces;
 using SmileApi.Application.Services;
 using SmileApi.Domain.Engines;
 using SmileApi.Infrastructure.AI;
 using SmileApi.Infrastructure.ImageProcessing;
 using SmileApi.Infrastructure.Persistence;
-using smile_api.Hubs;
-using smile_api.Infrastructure;
-using smile_api.Middleware;
+using System.Text;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -29,26 +26,30 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
 
+    // Kestrel listens on container port 8080
     builder.WebHost.ConfigureKestrel(serverOptions =>
     {
         serverOptions.ListenAnyIP(8080);
     });
 
-    builder.Host.UseSerilog((context, services, configuration) => configuration
-        .ReadFrom.Configuration(context.Configuration)
-        .ReadFrom.Services(services)
-        .Enrich.FromLogContext()
-        .WriteTo.Console());
+    builder.Host.UseSerilog((context, services, configuration) =>
+        configuration.ReadFrom.Configuration(context.Configuration)
+                     .ReadFrom.Services(services)
+                     .Enrich.FromLogContext()
+                     .WriteTo.Console()
+    );
 
+    // Add Controllers
     builder.Services.AddControllers();
 
+    // Form size limit
     builder.Services.Configure<FormOptions>(options =>
     {
         options.MultipartBodyLengthLimit = 50 * 1024 * 1024; // 50 MB
     });
-    builder.WebHost.ConfigureKestrel(serverOptions =>
+    builder.WebHost.ConfigureKestrel(options =>
     {
-        serverOptions.Limits.MaxRequestBodySize = 50 * 1024 * 1024; // 50 MB
+        options.Limits.MaxRequestBodySize = 50 * 1024 * 1024; // 50 MB
     });
 
     // JWT & Auth
@@ -77,7 +78,7 @@ try
             });
     }
 
-    // Application
+    // Application services
     builder.Services.AddScoped<ISmileScanService, SmileScanService>();
     builder.Services.AddSignalR();
     builder.Services.AddScoped<IScanProgressNotifier, SignalRScanProgressNotifier>();
@@ -90,6 +91,7 @@ try
     // Infrastructure
     builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseNpgsql(builder.Configuration.GetConnectionString("SupabaseConnection")));
+
     builder.Services.AddHttpClient<IImageProcessingService, ImageProcessingService>(client =>
     {
         client.Timeout = TimeSpan.FromSeconds(60);
@@ -102,15 +104,14 @@ try
         client.Timeout = TimeSpan.FromSeconds(30);
     })
     .AddTransientHttpErrorPolicy(policyBuilder => policyBuilder.WaitAndRetryAsync(
-        Backoff.DecorrelatedJitterBackoffV2(TimeSpan.FromSeconds(1), 3)
-    ))
+        Backoff.DecorrelatedJitterBackoffV2(TimeSpan.FromSeconds(1), 3)))
     .AddTransientHttpErrorPolicy(policyBuilder => policyBuilder.AdvancedCircuitBreakerAsync(
         failureThreshold: 0.5,
         samplingDuration: TimeSpan.FromSeconds(30),
         minimumThroughput: 3,
-        durationOfBreak: TimeSpan.FromSeconds(30)
-    ));
+        durationOfBreak: TimeSpan.FromSeconds(30)));
 
+    // API versioning & Swagger
     builder.Services.AddApiVersioning(options =>
     {
         options.DefaultApiVersion = new Asp.Versioning.ApiVersion(1, 0);
@@ -125,14 +126,14 @@ try
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
 
+    // CORS
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("AllowAll", policy =>
-        {
-            policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
-        });
+            policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
     });
 
+    // Rate limiting
     builder.Services.AddRateLimiter(options =>
     {
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -147,6 +148,7 @@ try
 
     var app = builder.Build();
 
+    // Middleware
     app.UseCors("AllowAll");
     app.UseMiddleware<GlobalExceptionMiddleware>();
     app.UseSwagger();
@@ -155,9 +157,13 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
 
+    // **Root endpoint first**
+    app.MapGet("/", () => Results.Ok(new { message = "API is running!" }));
+
+    // Controllers & hubs
     app.MapControllers().RequireRateLimiting("strict");
     app.MapHub<ScanLogicHub>("/hubs/scan");
-    app.MapGet("/", () => "API is running!");
+
     app.Run();
 }
 catch (Exception ex)
