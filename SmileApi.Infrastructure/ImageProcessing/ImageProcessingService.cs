@@ -9,7 +9,7 @@ namespace SmileApi.Infrastructure.ImageProcessing;
 public class ImageProcessingService : IImageProcessingService
 {
     private const int MaxFileSizeInBytes = 20 * 1024 * 1024;
-    private const int MaxImageWidth = 1024;
+    private const int MaxImageWidth = 768;
     private readonly HttpClient _httpClient;
 
     public ImageProcessingService(HttpClient httpClient)
@@ -19,15 +19,7 @@ public class ImageProcessingService : IImageProcessingService
 
     public async Task<(byte[] ProcessedImage, double ImageQualityScore)> ProcessImageAsync(string imageUrl)
     {
-        byte[] imageBytes;
-        try
-        {
-            imageBytes = await _httpClient.GetByteArrayAsync(imageUrl);
-        }
-        catch (HttpRequestException ex)
-        {
-            throw new ArgumentException("Failed to download image from the provided URL.", ex);
-        }
+        byte[] imageBytes = await GetImageBytesAsync(imageUrl);
 
         if (imageBytes.Length > MaxFileSizeInBytes)
             throw new ArgumentException("Image exceeds the maximum allowed size of 20MB.");
@@ -62,6 +54,35 @@ public class ImageProcessingService : IImageProcessingService
         await image.SaveAsJpegAsync(outputStream, new JpegEncoder { Quality = 90 });
 
         return (outputStream.ToArray(), finalImageQualityScore);
+    }
+
+    private async Task<byte[]> GetImageBytesAsync(string imageUrlOrDataUri)
+    {
+        const string dataImagePrefix = "data:image/";
+        if (imageUrlOrDataUri.StartsWith(dataImagePrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            var commaIndex = imageUrlOrDataUri.IndexOf(',');
+            if (commaIndex < 0)
+                throw new ArgumentException("Invalid data URI: missing base64 data.");
+            var base64 = imageUrlOrDataUri[(commaIndex + 1)..].Trim();
+            try
+            {
+                return Convert.FromBase64String(base64);
+            }
+            catch (FormatException ex)
+            {
+                throw new ArgumentException("Invalid base64 image data in data URI.", ex);
+            }
+        }
+
+        try
+        {
+            return await _httpClient.GetByteArrayAsync(imageUrlOrDataUri);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new ArgumentException("Failed to download image from the provided URL. Check that the URL is accessible.", ex);
+        }
     }
 
     private static double CalculateResolutionScore(int width)

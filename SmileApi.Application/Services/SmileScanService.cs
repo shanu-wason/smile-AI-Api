@@ -45,7 +45,8 @@ public class SmileScanService : ISmileScanService
         var (processedImageBytes, imageQuality) = await _imageProcessingService.ProcessImageAsync(request.ImageUrl);
         await _progressNotifier.NotifyProgressAsync(request.ExternalPatientId, "Initiating AI analysis sequence...", 30);
 
-        var aiResult = await _aiAnalysisService.AnalyzeAsync(processedImageBytes, request.ModelSelection, userApiKeys);
+        var aiResult = await _aiAnalysisService.AnalyzeAsync(processedImageBytes, request.ModelSelection, userApiKeys, (msg, pct) =>
+            _ = _progressNotifier.NotifyProgressAsync(request.ExternalPatientId, msg, pct));
         await _progressNotifier.NotifyProgressAsync(request.ExternalPatientId, "Calculating clinical smile score...", 70);
 
         var consistencyScore = _featureConsistencyEngine.CalculateConsistencyScore(aiResult);
