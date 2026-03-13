@@ -157,7 +157,7 @@ try
 
     app.MapControllers().RequireRateLimiting("strict");
     app.MapHub<ScanLogicHub>("/hubs/scan");
-
+    app.MapGet("/", () => "API is running!");
     app.Run();
 }
 catch (Exception ex)
